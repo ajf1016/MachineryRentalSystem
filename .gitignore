@@ -1,47 +1,33 @@
-# Byte-compiled / optimized / DLL files
+# Byte-compiled files
 __pycache__/
 *.py[cod]
-*.pyo
 
 # Virtual environment
-venv/
 env/
+venv/
 *.env
 
-# PyQt5 UI build files
-*.pyc
-*.pyo
-*.pyd
+# Database
+db/*.db
+*.sqlite3
 
-# SQLite database file
-database.db
-
-# Qt Designer backup files
-*.bak
-*.autosave
-
-# Logs and debug output
+# Logs
 *.log
 
-# OS-generated files
+# IDE files
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
 
-# Config files (if you don’t want to version control settings)
-config.ini
+# Compiled files or temporary files
+*.bak
+*.swp
+*.tmp
 
-# Python package build files
-build/
+# PyInstaller build artifacts (if you package the app)
 dist/
-*.egg-info/
-
-# Compiled UI files (optional)
-*.qrc
-*.rcc
-
-# Jupyter Notebook checkpoints (if you use notebooks for prototyping)
-.ipynb_checkpoints/
-
-# Generated reports
-reports/*.pdf
-reports/*.xlsx
+build/
+*.spec
