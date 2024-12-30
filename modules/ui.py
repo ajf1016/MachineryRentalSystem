@@ -67,10 +67,13 @@ def create_register_products_ui(frame):
 
  # Styles for consistent light theme
     style = ttk.Style()
-    style.configure("TFrame", background="#f9f9f9")
-    style.configure("TLabel", background="#f9f9f9", font=("Arial", 12))
-    style.configure("TEntry", font=("Arial", 12))
-    style.configure("TCombobox", font=("Arial", 12))
+    style.configure("TFrame", foreground="#000", background="#fff")
+    style.configure("TLabel", foreground="#000",
+                    background="#fff", font=("Arial", 12))
+    style.configure("TEntry", foreground="#000",
+                    background="#fff", font=("Arial", 12))
+    style.configure("TCombobox", foreground="#000",
+                    background="#fff", font=("Arial", 12))
     style.configure("TButton", font=("Arial", 12, "bold"),
                     background="#0078D7", foreground="#ffffff")
 
@@ -84,7 +87,7 @@ def create_register_products_ui(frame):
 
     # Product Registration Form
     ttk.Label(form_frame, text="Product Registration",
-              font=("Arial", 14, "bold")).pack(pady=10)
+              font=("Arial", 14, "bold"), foreground="#000", background="#fff").pack(pady=10)
 
     # Product Registration Fields
     product_fields = [
@@ -120,9 +123,9 @@ def create_register_products_ui(frame):
 
     # Rental Information Form
     ttk.Label(rental_form_frame, text="Rental Information",
-              font=("Arial", 14, "bold")).pack(pady=10)
+              font=("Arial", 14, "bold"), foreground="#000", background="#fff").pack(pady=10)
     product_info_label = ttk.Label(rental_form_frame, text="", font=(
-        "Arial", 12), justify="left", background="#000", relief="sunken")
+        "Arial", 12), justify="left", foreground="#000", background="#fff", relief="sunken")
     product_info_label.pack(fill="x", padx=10, pady=10)
 
     # Rental Fields
@@ -327,7 +330,7 @@ def create_rental_flow_ui(frame):
     style.configure(
         "Treeview.Heading",
         font=("Arial", 15, "bold"),  # Slightly reduced heading font
-        background="#f1f1f1",  # Light gray for heading background
+        background="#fff",
         foreground="#000000",  # Black text for heading
     )
     style.map(
@@ -342,6 +345,7 @@ def create_rental_flow_ui(frame):
         text="Rental History",
         font=("Arial", 15, "bold"),  # Smaller title font for consistency
         background="#f9f9f9",
+        foreground="#000000"
     )
     title_label.pack(pady=10)
 
@@ -453,7 +457,8 @@ def create_products_table_ui(frame):
         text="Products Management",
         font=("Arial", 20, "bold"),
         # color="black",
-        background="#000",
+        background="#fff",
+        foreground="#000000",
     )
     title_label.pack(pady=10)
 
