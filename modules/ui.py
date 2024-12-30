@@ -198,6 +198,10 @@ def create_register_products_ui(frame):
             messagebox.showerror("Error", "Please fill all required fields!")
             return
 
+        if product_entries["status"].get() == "Rented":
+            messagebox.showerror("Error", "Product is already rented!")
+            return
+
         try:
             product = fetch_product_by_tag(product_entries["tag"].get())
             if product:
