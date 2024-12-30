@@ -1,6 +1,7 @@
 import sqlite3
 
 
+# Modify the rentals table to include customer details
 def initialize_db():
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
@@ -25,9 +26,16 @@ def initialize_db():
     CREATE TABLE IF NOT EXISTS rentals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INTEGER NOT NULL,
-        start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        end_time TIMESTAMP,
+        customer_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        vehicle TEXT,
+        place TEXT NOT NULL,
+        rental_type TEXT DEFAULT 'Per Day',
+        rental_duration INTEGER NOT NULL,
         total_cost REAL DEFAULT 0,
+        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        end_time TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products (id)
     )
     """)
@@ -88,16 +96,23 @@ def fetch_all_products():
     return rows
 
 
-def add_rental(product_id):
+def add_rental(product_id, customer_name, phone, email, vehicle, place, rental_duration):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO rentals (product_id)
-        VALUES (?)
-    """, (product_id,))
-    conn.commit()
-    rental_id = cursor.lastrowid
-    conn.close()
+    try:
+        # Insert rental details into the table
+        cursor.execute("""
+            INSERT INTO rentals (
+                product_id, customer_name, phone, email, vehicle, place, rental_duration
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (product_id, customer_name, phone, email, vehicle, place, rental_duration))
+        conn.commit()
+        rental_id = cursor.lastrowid
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
     return rental_id
 
 
