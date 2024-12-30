@@ -1,6 +1,8 @@
 import threading
 import serial
+import serial.tools.list_ports
 from tkinter import messagebox
+import platform
 
 
 class RFIDReaderThread(threading.Thread):
@@ -15,10 +17,36 @@ class RFIDReaderThread(threading.Thread):
         """Set the callback function for detected tags."""
         self.on_tag_detected_callback = callback
 
+    def find_serial_port(self):
+        """Find the appropriate serial port dynamically based on the OS."""
+        try:
+            ports = list(serial.tools.list_ports.comports())
+            for port in ports:
+                if platform.system() == "Windows":
+                    # Windows ports usually have "COM" in their names
+                    if "COM" in port.device.upper():
+                        return port.device
+                elif platform.system() == "Darwin":  # macOS
+                    # macOS ports usually contain "usbserial" or "tty"
+                    if "usbserial" in port.device.lower() or "tty" in port.device.lower():
+                        return port.device
+            return None
+        except Exception as e:
+            messagebox.showerror(
+                "RFID Reader Error",
+                f"Error detecting serial port: {e}. Ensure the device is connected.",
+            )
+            return None
+
     def run(self):
         try:
-            self.ser = serial.Serial(
-                '/dev/tty.usbserial-AR0JT4RL', 115200, timeout=1)
+            serial_port = self.find_serial_port()
+            if not serial_port:
+                raise FileNotFoundError("No compatible serial port found.")
+
+            self.ser = serial.Serial(serial_port, 115200, timeout=1)
+            print(f"Connected to RFID reader on port {serial_port}")
+
             while self.running:
                 raw_data = self.ser.readline()
                 if raw_data:
@@ -33,6 +61,12 @@ class RFIDReaderThread(threading.Thread):
             messagebox.showerror(
                 "RFID Reader Error", "Serial port not found. Ensure the device is connected."
             )
+        except Exception as e:
+            # Error: list indices must be integers or slices, not tuple
+            print(f"Errorzzz: {e}")
+            messagebox.showerror(
+                "RFID Reader Error", f"Unexpected error occurred: {e}"
+            )
         finally:
             if self.ser and self.ser.is_open:
                 self.ser.close()
@@ -46,10 +80,12 @@ class RFIDReaderThread(threading.Thread):
     @staticmethod
     def parse_tag_data(raw_data):
         """Parse the raw RFID data to extract the stable tag ID."""
-        hex_data = raw_data.hex()
-        if hex_data.startswith("a55a"):
-            return hex_data[:40]  # Extract the first 40 characters
-        print("None")
+        try:
+            hex_data = raw_data.hex()
+            if hex_data.startswith("a55a"):  # Example header check
+                return hex_data[:40]  # Extract the first 40 characters
+        except Exception as e:
+            print(f"Error parsing tag data: {e}")
         return None
 
 
@@ -58,8 +94,8 @@ rfid_thread = None
 
 
 def start_rfid_thread(callback=None):
-    print("Starting RFID thread")
     """Start the RFID thread."""
+    print("Starting RFID thread")
     global rfid_thread
     if not rfid_thread or not rfid_thread.is_alive():
         rfid_thread = RFIDReaderThread()
@@ -70,8 +106,8 @@ def start_rfid_thread(callback=None):
 
 
 def stop_rfid_thread():
-    print("Stop RFID thread")
     """Stop the RFID thread."""
+    print("Stopping RFID thread")
     global rfid_thread
     if rfid_thread:
         rfid_thread.stop()

@@ -58,7 +58,7 @@ def add_product(name, tag_id, category, status, rental_type, rental_rate):
         """, (name, tag_id, category, status, rental_type, rental_rate))
         conn.commit()
     except sqlite3.IntegrityError as e:
-        return f"Error: {e}"
+        return f"Errorxxxx: {e}"
     finally:
         conn.close()
 
@@ -116,6 +116,7 @@ def add_rental(product_id, customer_name, phone, email, vehicle, place, rental_d
 
 
 def end_rental(rental_id, total_cost):
+    print("end rental")
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     cursor.execute("""

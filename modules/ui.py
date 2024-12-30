@@ -178,12 +178,14 @@ def create_register_products_ui(frame):
         try:
             rental_rate = float(rental_rate)
         except ValueError:
+            print("Error", "Rental Rate must be a number.")
             messagebox.showerror("Error", "Rental Rate must be a number.")
             return
 
         result = add_product(name, tag_id, category,
                              status, rental_type, rental_rate)
         if result:
+            print("Error", "001 ", result)
             messagebox.showerror("Error", result)
         else:
             messagebox.showinfo("Success", "Product added successfully!")
@@ -198,7 +200,8 @@ def create_register_products_ui(frame):
         entry_time = entry_time_label.cget("text")
 
         if not customer_name or not phone or not place or not duration:
-            messagebox.showerror("Error", "Please fill all required fields!")
+            messagebox.showerror(
+                "Error", "Please fill all required fields!")
             return
 
         if product_entries["status"].get() == "Rented":
@@ -215,9 +218,11 @@ def create_register_products_ui(frame):
                 messagebox.showinfo(
                     "Success", f"Rental created successfully for {customer_name}!")
             else:
+                print("002 No product associated with this tag!")
                 messagebox.showerror(
                     "Error", "No product associated with this tag!")
         except Exception as e:
+            print("Error", f"An error occurred: {str(e)}")
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
     # RFID Detection
@@ -305,8 +310,14 @@ def create_register_products_ui(frame):
         return 0
 
     def clear_rental_form():
-        for key in rental_fields:
-            rental_fields[key].delete(0, "end")
+        """Clears the rental form fields."""
+        for key, entry in rental_entries.items():
+            if isinstance(entry, ttk.Entry):  # Ensure it's a valid entry widget
+                entry.delete(0, "end")
+            else:
+                print(f"Unexpected widget type for key '{key}': {type(entry)}")
+
+        # Clear the entry and exit time labels
         entry_time_label.config(text="")
         exit_time_label.config(text="")
 
@@ -406,13 +417,13 @@ def create_rental_flow_ui(frame):
                 row[0],  # ID
                 row[1],  # Customer Name
                 row[2],  # Phone
-                row[3],  # Place
-                row[4],  # Duration
-                row[5],  # Duration
-                row[6],  # Duration
+                row[3],  # Product Name (corrected)
+                row[4],  # Rental Type
+                row[5],  # Place
+                row[6],  # Rental Duration
                 formatted_start_time,  # Entry Time (formatted)
                 formatted_end_time,  # Exit Time (formatted)
-                row[9],  # Duration
+                row[9],  # Total Cost
             ))
         conn.close()
 
@@ -524,13 +535,15 @@ def create_products_table_ui(frame):
     def handle_edit_product():
         selected_item = product_table.focus()
         if not selected_item:
-            messagebox.showerror("Error", "Please select a product to edit.")
+            messagebox.showerror(
+                "Error", "Please select a product to edit.")
             return
 
         product = product_table.item(selected_item)["values"]
         print("Selected Product:", product)
         if not product:
-            messagebox.showerror("Error", "Failed to fetch product details.")
+            messagebox.showerror(
+                "Error", "Failed to fetch product details.")
             return
 
         # Extract product details
@@ -596,7 +609,8 @@ def create_products_table_ui(frame):
             try:
                 new_rental_rate = float(new_rental_rate)
             except ValueError:
-                messagebox.showerror("Error", "Rental Rate must be a number.")
+                messagebox.showerror(
+                    "Error", "Rental Rate must be a number.")
                 return
 
             update_product(product_id, new_name, new_tag_id, new_category,
@@ -613,7 +627,8 @@ def create_products_table_ui(frame):
     def handle_delete_product():
         selected_item = product_table.focus()
         if not selected_item:
-            messagebox.showerror("Error", "Please select a product to delete.")
+            messagebox.showerror(
+                "Error", "Please select a product to delete.")
             return
 
         product = product_table.item(selected_item)["values"]
@@ -623,6 +638,7 @@ def create_products_table_ui(frame):
         )
         if confirm:
             delete_product(product_id)
+            print("Success", "Product deleted successfully!")
             messagebox.showinfo("Success", "Product deleted successfully!")
             load_products()
 
