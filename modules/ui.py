@@ -4,12 +4,50 @@ import threading
 import serial
 from modules.rental_flow import detect_rfid
 
+rfid_thread = None  # Global RFID thread reference
+active_tab = None
+
+
+def start_rfid_reader(on_tag_detected):
+    global rfid_thread
+    if rfid_thread and rfid_thread.is_alive():
+        rfid_thread.stop()
+    rfid_thread = RFIDReaderThread(on_tag_detected)
+    rfid_thread.start()
+
+
+def stop_rfid_reader():
+    global rfid_thread
+    if rfid_thread:
+        rfid_thread.stop()
+        rfid_thread.join()
+
+
+def on_close(root):
+    stop_rfid_reader()
+    root.destroy()
+
+
+def on_tag_detected(tag_id):
+    """
+    Dispatch the detected tag to the correct tab handler.
+    """
+    if active_tab == "Register Products":
+        if register_on_tag_detected:
+            register_on_tag_detected(tag_id)
+    elif active_tab == "Rental Flow":
+        if rental_on_tag_detected:
+            rental_on_tag_detected(tag_id)
+
+
+register_on_tag_detected = None
+rental_on_tag_detected = None
+
 
 def create_ui(root):
-    # Add tabs for Register Products and Rental Flow
-    notebook = ttk.Notebook(root)
+    global active_tab
 
-    # Create frames for tabs
+    notebook = ttk.Notebook(root)
     register_frame = ttk.Frame(notebook)
     rental_frame = ttk.Frame(notebook)
 
@@ -17,11 +55,30 @@ def create_ui(root):
     notebook.add(rental_frame, text="Rental Flow")
     notebook.pack(fill="both", expand=True)
 
-    # Create Register Products UI
+    # Create tabs
     create_register_products_ui(register_frame)
-
-    # Create Rental Flow UI
     create_rental_flow_ui(rental_frame)
+
+    def on_tab_changed(event):
+        global active_tab
+        selected_tab = event.widget.tab(event.widget.index("current"))["text"]
+        active_tab = selected_tab
+
+        if selected_tab == "Rental Flow":
+            # Start RFID reader for rental flow
+            start_rfid_reader(on_tag_detected)
+        else:
+            stop_rfid_reader()  # Stop RFID reader when switching tabs
+
+    notebook.bind("<<NotebookTabChanged>>", on_tab_changed)
+
+    # Initialize active tab
+    active_tab = notebook.tab(notebook.index("current"))["text"]
+    if active_tab == "Rental Flow":
+        start_rfid_reader(on_tag_detected)
+
+    # Handle application close
+    root.protocol("WM_DELETE_WINDOW", lambda: on_close(root))
 
 
 def parse_tag_data(raw_data):
@@ -31,7 +88,7 @@ def parse_tag_data(raw_data):
     hex_data = raw_data.hex()
     if hex_data.startswith("a55a"):
         # Extract the stable part of the tag ID (first 24 bytes or 48 hex characters)
-        return hex_data[:48]
+        return hex_data[:40]
     return None
 
 
@@ -40,41 +97,37 @@ class RFIDReaderThread(threading.Thread):
         super().__init__()
         self.on_tag_detected = on_tag_detected
         self.running = True
+        self.ser = None  # Initialize serial port variable here
 
     def run(self):
-        ser = None
         try:
-            ser = serial.Serial(
-                '/dev/tty.usbserial-AR0JT4RL', 115200, timeout=1
-
-            )
+            self.ser = serial.Serial(
+                '/dev/tty.usbserial-AR0JT4RL', 115200, timeout=1)
             while self.running:
-                raw_data = ser.readline()
+                raw_data = self.ser.readline()
                 if raw_data:
-                    hex_data = raw_data.hex()
-                    if hex_data.startswith("a55a"):
-                        # Extract the stable part of the tag ID (first 24 bytes or 48 hex characters)
-                        tag_id = hex_data[:40]
-                        print(f"Tag ID: {tag_id}")
+                    tag_id = parse_tag_data(raw_data)
+                    if tag_id:
                         self.on_tag_detected(tag_id)
         except serial.SerialException as e:
-            messagebox.showerror("Error",
-                                 f"Error: {e}. Please check the connection to the RFID reader.")
-            print(
-                f"Error: {e}. Please check the connection to the RFID reader.")
+            print(f"Error: {e}")
+            messagebox.showerror("RFID Reader Error", f"Device error: {
+                                 e}. Ensure the RFID reader is connected and no other process is using the port.")
         except FileNotFoundError:
-            messagebox.showerror("Error",
-                                 "Error: Serial port not found. Ensure the RFID reader is connected.")
-            print("Error: Serial port not found. Ensure the RFID reader is connected.")
+            print("Error: Serial port not found.")
+            messagebox.showerror(
+                "RFID Reader Error", "Serial port not found. Please check the connection.")
+
         finally:
-            if ser and ser.is_open:
-                ser.close()
+            if self.ser and self.ser.is_open:
+                self.ser.close()
 
     def stop(self):
         self.running = False
 
 
 def create_register_products_ui(frame):
+    global register_on_tag_detected
     # Frame for Form
     form_frame = ttk.Frame(frame)
     form_frame.pack(side="top", fill="x", padx=10, pady=10)
@@ -218,13 +271,22 @@ def create_register_products_ui(frame):
         for product in fetch_all_products():
             tree.insert("", "end", values=product)
 
+    def on_tag_detected(tag_id):
+        tag_entry.delete(0, "end")
+        tag_entry.insert(0, tag_id)
+
     refresh_treeview()
 
     # Auto-fill RFID Tag when a tag is detected
 
-    def on_tag_detected(tag_id):
+    def on_detected(tag_id):
+        """
+        Auto-fill RFID Tag in the registration form when detected.
+        """
         tag_entry.delete(0, "end")
         tag_entry.insert(0, tag_id)
+
+    register_on_tag_detected = on_detected
 
     # Start RFID Reader in a separate thread
     rfid_reader = RFIDReaderThread(on_tag_detected)
@@ -235,18 +297,18 @@ def create_register_products_ui(frame):
 
 
 def create_rental_flow_ui(frame):
-    # Frame for displaying rental flow
+    global rental_on_tag_detected
+
     rental_frame = ttk.Frame(frame)
     rental_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
-
-    # Display detected product details
-    ttk.Label(rental_frame, text="Rental Flow",
-              font=("Arial", 16)).pack(pady=10)
 
     product_details = ttk.Label(rental_frame, text="", font=("Arial", 12))
     product_details.pack(pady=10)
 
-    def on_tag_detected(tag_id):
+    def on_detected(tag_id):
+        """
+        Handle detected tag in rental flow and update the UI.
+        """
         result = detect_rfid(tag_id)
         if "error" in result:
             product_details.config(text=f"Error: {result['error']}")
@@ -260,9 +322,4 @@ def create_rental_flow_ui(frame):
             )
             product_details.config(text=details)
 
-    # Start RFID Reader in a separate thread
-    rfid_reader = RFIDReaderThread(on_tag_detected)
-    rfid_reader.start()
-
-    # Stop the reader when the app closes
-    frame.winfo_toplevel().protocol("WM_DELETE_WINDOW", rfid_reader.stop)
+    rental_on_tag_detected = on_detected

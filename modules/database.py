@@ -15,7 +15,8 @@ def initialize_db():
         status TEXT DEFAULT 'Available',
         added_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         rental_type TEXT DEFAULT 'Per Day',
-        rental_rate REAL DEFAULT 0
+        rental_rate REAL DEFAULT 0,
+        last_action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
     conn.commit()
@@ -26,6 +27,12 @@ def add_product(name, tag_id, category, status, rental_type, rental_rate):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     try:
+        # Check if tag_id already exists
+        cursor.execute("SELECT id FROM products WHERE tag_id = ?", (tag_id,))
+        if cursor.fetchone():
+            return "Error: A product with this RFID tag already exists."
+
+        # Insert the new product
         cursor.execute("""
             INSERT INTO products (name, tag_id, category, status, rental_type, rental_rate)
             VALUES (?, ?, ?, ?, ?, ?)
