@@ -19,6 +19,18 @@ def initialize_db():
         last_action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    # Create the rentals table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS rentals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        end_time TIMESTAMP,
+        total_cost REAL DEFAULT 0,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+    )
+    """)
     conn.commit()
     conn.close()
 
@@ -74,6 +86,69 @@ def fetch_all_products():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def add_rental(product_id):
+    conn = sqlite3.connect("db/rental.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO rentals (product_id)
+        VALUES (?)
+    """, (product_id,))
+    conn.commit()
+    rental_id = cursor.lastrowid
+    conn.close()
+    return rental_id
+
+
+def end_rental(rental_id, total_cost):
+    conn = sqlite3.connect("db/rental.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE rentals
+        SET end_time = CURRENT_TIMESTAMP, total_cost = ?
+        WHERE id = ?
+    """, (total_cost, rental_id))
+    conn.commit()
+    conn.close()
+
+
+def fetch_product_by_tag(tag_id):
+    conn = sqlite3.connect("db/rental.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, name, status, rental_type, rental_rate
+        FROM products
+        WHERE tag_id = ?
+    """, (tag_id,))
+    product = cursor.fetchone()
+    conn.close()
+    return product
+
+
+def update_product_status(product_id, status):
+    conn = sqlite3.connect("db/rental.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE products
+        SET status = ?, last_action_time = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (status, product_id))
+    conn.commit()
+    conn.close()
+
+
+def fetch_active_rental(product_id):
+    conn = sqlite3.connect("db/rental.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, start_time
+        FROM rentals
+        WHERE product_id = ? AND end_time IS NULL
+    """, (product_id,))
+    rental = cursor.fetchone()
+    conn.close()
+    return rental
 
 
 # Initialize the database when the module is imported
