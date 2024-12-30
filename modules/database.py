@@ -12,19 +12,24 @@ def initialize_db():
         name TEXT NOT NULL,
         tag_id TEXT UNIQUE NOT NULL,
         category TEXT,
-        status TEXT DEFAULT 'Available'
+        status TEXT DEFAULT 'Available',
+        added_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        rental_type TEXT DEFAULT 'Per Day',
+        rental_rate REAL DEFAULT 0
     )
     """)
     conn.commit()
     conn.close()
 
 
-def add_product(name, tag_id, category, status):
+def add_product(name, tag_id, category, status, rental_type, rental_rate):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO products (name, tag_id, category, status) VALUES (?, ?, ?, ?)",
-                       (name, tag_id, category, status))
+        cursor.execute("""
+            INSERT INTO products (name, tag_id, category, status, rental_type, rental_rate)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, tag_id, category, status, rental_type, rental_rate))
         conn.commit()
     except sqlite3.IntegrityError as e:
         return f"Error: {e}"
@@ -32,14 +37,14 @@ def add_product(name, tag_id, category, status):
         conn.close()
 
 
-def update_product(product_id, name, tag_id, category, status):
+def update_product(product_id, name, tag_id, category, status, rental_type, rental_rate):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE products
-        SET name = ?, tag_id = ?, category = ?, status = ?
+        SET name = ?, tag_id = ?, category = ?, status = ?, rental_type = ?, rental_rate = ?
         WHERE id = ?
-    """, (name, tag_id, category, status, product_id))
+    """, (name, tag_id, category, status, rental_type, rental_rate, product_id))
     conn.commit()
     conn.close()
 
@@ -55,7 +60,10 @@ def delete_product(product_id):
 def fetch_all_products():
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("""
+        SELECT id, name, tag_id, category, status, added_time, rental_type, rental_rate
+        FROM products
+    """)
     rows = cursor.fetchall()
     conn.close()
     return rows
