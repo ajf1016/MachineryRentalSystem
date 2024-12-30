@@ -2,6 +2,7 @@ from tkinter import ttk, messagebox
 from modules.database import add_product, fetch_all_products, delete_product, update_product
 import threading
 import serial
+from modules.rental_flow import detect_rfid
 
 
 def create_ui(root):
@@ -19,8 +20,19 @@ def create_ui(root):
     # Create Register Products UI
     create_register_products_ui(register_frame)
 
-    # Placeholder content for Rental Flow
-    ttk.Label(rental_frame, text="Track Rentals Here").pack(pady=20)
+    # Create Rental Flow UI
+    create_rental_flow_ui(rental_frame)
+
+
+def parse_tag_data(raw_data):
+    """
+    Parse the raw RFID data to extract the stable tag ID.
+    """
+    hex_data = raw_data.hex()
+    if hex_data.startswith("a55a"):
+        # Extract the stable part of the tag ID (first 24 bytes or 48 hex characters)
+        return hex_data[:48]
+    return None
 
 
 class RFIDReaderThread(threading.Thread):
@@ -30,23 +42,33 @@ class RFIDReaderThread(threading.Thread):
         self.running = True
 
     def run(self):
+        ser = None
         try:
             ser = serial.Serial(
-                '/dev/tty.usbserial-AR0JT4RL', 115200, timeout=1)
+                '/dev/tty.usbserial-AR0JT4RL', 115200, timeout=1
+
+            )
             while self.running:
                 raw_data = ser.readline()
                 if raw_data:
                     hex_data = raw_data.hex()
-                    print(f"Raw Hex Data: {hex_data}")
-
-                    # Example parsing: Extract tag ID
                     if hex_data.startswith("a55a"):
-                        tag_id = hex_data  # Or extract specific bytes if necessary
+                        # Extract the stable part of the tag ID (first 24 bytes or 48 hex characters)
+                        tag_id = hex_data[:40]
+                        print(f"Tag ID: {tag_id}")
                         self.on_tag_detected(tag_id)
         except serial.SerialException as e:
-            print(f"Error: {e}")
+            messagebox.showerror("Error",
+                                 f"Error: {e}. Please check the connection to the RFID reader.")
+            print(
+                f"Error: {e}. Please check the connection to the RFID reader.")
+        except FileNotFoundError:
+            messagebox.showerror("Error",
+                                 "Error: Serial port not found. Ensure the RFID reader is connected.")
+            print("Error: Serial port not found. Ensure the RFID reader is connected.")
         finally:
-            ser.close()
+            if ser and ser.is_open:
+                ser.close()
 
     def stop(self):
         self.running = False
@@ -203,6 +225,40 @@ def create_register_products_ui(frame):
     def on_tag_detected(tag_id):
         tag_entry.delete(0, "end")
         tag_entry.insert(0, tag_id)
+
+    # Start RFID Reader in a separate thread
+    rfid_reader = RFIDReaderThread(on_tag_detected)
+    rfid_reader.start()
+
+    # Stop the reader when the app closes
+    frame.winfo_toplevel().protocol("WM_DELETE_WINDOW", rfid_reader.stop)
+
+
+def create_rental_flow_ui(frame):
+    # Frame for displaying rental flow
+    rental_frame = ttk.Frame(frame)
+    rental_frame.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+
+    # Display detected product details
+    ttk.Label(rental_frame, text="Rental Flow",
+              font=("Arial", 16)).pack(pady=10)
+
+    product_details = ttk.Label(rental_frame, text="", font=("Arial", 12))
+    product_details.pack(pady=10)
+
+    def on_tag_detected(tag_id):
+        result = detect_rfid(tag_id)
+        if "error" in result:
+            product_details.config(text=f"Error: {result['error']}")
+        else:
+            details = (
+                f"Product Name: {result['name']}\n"
+                f"Category: {result['category']}\n"
+                f"Old Status: {result['old_status']}\n"
+                f"New Status: {result['new_status']}\n"
+                f"Timestamp: {result['time']}"
+            )
+            product_details.config(text=details)
 
     # Start RFID Reader in a separate thread
     rfid_reader = RFIDReaderThread(on_tag_detected)
