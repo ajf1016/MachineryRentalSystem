@@ -14,7 +14,6 @@ def initialize_db():
         tag_id TEXT UNIQUE NOT NULL,
         category TEXT,
         status TEXT DEFAULT 'Available',
-        added_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         rental_type TEXT DEFAULT 'Per Day',
         rental_rate REAL DEFAULT 0,
         last_action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -43,7 +42,7 @@ def initialize_db():
     conn.close()
 
 
-def add_product(name, tag_id, category, status, rental_type, rental_rate, added_time):
+def add_product(name, tag_id, category, status, rental_type, rental_rate):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     try:
@@ -88,7 +87,7 @@ def fetch_all_products():
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, name, tag_id, category, status, added_time, rental_type, rental_rate
+        SELECT id, name, tag_id, category, status, rental_type, rental_rate
         FROM products
     """)
     rows = cursor.fetchall()

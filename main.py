@@ -8,7 +8,7 @@ from modules.ui import create_ui
 
 
 def main():
-    style = Style(theme="solar")
+    style = Style(theme="superhero")
     root = style.master
     root.title("HiDo Machinery Rental Management System")
     root.geometry("800x600")
