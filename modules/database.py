@@ -43,7 +43,7 @@ def initialize_db():
     conn.close()
 
 
-def add_product(name, tag_id, category, status, rental_type, rental_rate):
+def add_product(name, tag_id, category, status, rental_type, rental_rate, added_time):
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
     try:
