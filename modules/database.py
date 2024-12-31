@@ -4,14 +4,13 @@ from pathlib import Path
 import sqlite3
 import sys
 
-
 # Get the bundled database location (PyInstaller runtime fix)
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller bundle
     bundled_db_path = os.path.join(sys._MEIPASS, "db/rental.db")
 else:
     # Running in development
-    bundled_db_path = "db/rental.db"
+    bundled_db_path = os.path.abspath("db/rental.db")
 
 # Copy the database to a persistent location
 user_home = Path.home()
@@ -19,18 +18,23 @@ db_dir = user_home / "HiDoAppData"
 db_dir.mkdir(exist_ok=True)
 db_path = db_dir / "rental.db"
 
-if not db_path.exists():
-    shutil.copy(bundled_db_path, db_path)
-
-# Function to return a connection to the persistent database
+try:
+    if not db_path.exists():
+        shutil.copy(bundled_db_path, db_path)
+        print(f"Database copied to: {db_path}")  # Debugging log
+except Exception as e:
+    raise RuntimeError(f"Failed to set up database: {e}")
 
 
 def get_db_connection():
+    """Return a connection to the persistent database."""
+    print(f"Connecting to database at: {db_path}")  # Debugging log
     return sqlite3.connect(db_path)
 
 
 def initialize_db():
-    conn = sqlite3.connect("db/rental.db")
+    """Initialize the database by creating necessary tables."""
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Create the products table
@@ -70,28 +74,26 @@ def initialize_db():
 
 
 def add_product(name, tag_id, category, status, rental_type, rental_rate):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Check if tag_id already exists
         cursor.execute("SELECT id FROM products WHERE tag_id = ?", (tag_id,))
         if cursor.fetchone():
-            return "Error: A product with this RFID tag already exists."
+            raise ValueError("A product with this RFID tag already exists.")
 
-        # Insert the new product
         cursor.execute("""
             INSERT INTO products (name, tag_id, category, status, rental_type, rental_rate)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (name, tag_id, category, status, rental_type, rental_rate))
         conn.commit()
     except sqlite3.IntegrityError as e:
-        return f"Errorxxxx: {e}"
+        raise RuntimeError(f"Database error: {e}")
     finally:
         conn.close()
 
 
 def update_product(product_id, name, tag_id, category, status, rental_type, rental_rate):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE products
@@ -103,7 +105,7 @@ def update_product(product_id, name, tag_id, category, status, rental_type, rent
 
 
 def delete_product(product_id):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
     conn.commit()
@@ -111,7 +113,7 @@ def delete_product(product_id):
 
 
 def fetch_all_products():
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, name, tag_id, category, status, rental_type, rental_rate
@@ -123,10 +125,9 @@ def fetch_all_products():
 
 
 def add_rental(product_id, customer_name, phone, email, vehicle, place, rental_duration):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Insert rental details into the table
         cursor.execute("""
             INSERT INTO rentals (
                 product_id, customer_name, phone, email, vehicle, place, rental_duration
@@ -143,8 +144,7 @@ def add_rental(product_id, customer_name, phone, email, vehicle, place, rental_d
 
 
 def end_rental(rental_id, total_cost):
-    print("end rental")
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE rentals
@@ -156,7 +156,7 @@ def end_rental(rental_id, total_cost):
 
 
 def fetch_product_by_tag(tag_id):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, name, status, rental_type, rental_rate
@@ -169,7 +169,7 @@ def fetch_product_by_tag(tag_id):
 
 
 def update_product_status(product_id, status):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE products
@@ -181,7 +181,7 @@ def update_product_status(product_id, status):
 
 
 def fetch_active_rental(product_id):
-    conn = sqlite3.connect("db/rental.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, start_time
