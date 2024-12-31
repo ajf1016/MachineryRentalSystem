@@ -1,4 +1,11 @@
+altgraph==0.17.4
+macholib==1.16.3
+packaging==24.2
 pillow==11.0.0
+pyinstaller==6.11.1
+pyinstaller-hooks-contrib==2024.11
 pyserial==3.5
+pytz==2024.2
+setuptools==75.6.0
 tk==0.1.0
 ttkbootstrap==1.10.1
