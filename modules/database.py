@@ -1,7 +1,34 @@
+import os
+import shutil
+from pathlib import Path
 import sqlite3
+import sys
 
 
-# Modify the rentals table to include customer details
+# Get the bundled database location (PyInstaller runtime fix)
+if getattr(sys, 'frozen', False):
+    # Running in PyInstaller bundle
+    bundled_db_path = os.path.join(sys._MEIPASS, "db/rental.db")
+else:
+    # Running in development
+    bundled_db_path = "db/rental.db"
+
+# Copy the database to a persistent location
+user_home = Path.home()
+db_dir = user_home / "HiDoAppData"
+db_dir.mkdir(exist_ok=True)
+db_path = db_dir / "rental.db"
+
+if not db_path.exists():
+    shutil.copy(bundled_db_path, db_path)
+
+# Function to return a connection to the persistent database
+
+
+def get_db_connection():
+    return sqlite3.connect(db_path)
+
+
 def initialize_db():
     conn = sqlite3.connect("db/rental.db")
     cursor = conn.cursor()
