@@ -26,6 +26,8 @@ Machinery Rental Management System is a Python-based application designed to man
 2. **Install packages and run**
    ```bash
    python3 -m venv venv
+   source venv/bin/activate #Linux/Unix
+   Venv\Scripts\Activate #Windows
    pip install -r requirements.txt
    python main.py
 3.**Building the Application with PyInstaller**
